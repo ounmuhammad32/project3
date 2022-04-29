@@ -39,7 +39,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: ounmuhammad/flas_auth
+
+          images: ounmuhammad/flask_auth
 
       - name: Build and push
         uses: docker/build-push-action@v2
