@@ -1,25 +1,41 @@
 from datetime import datetime
+""" Models for MVC """
+from datetime import datetime
+from email import header
 
 from sqlalchemy import Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from werkzeug.security import check_password_hash, generate_password_hash
-from app.db import db
 from flask_login import UserMixin
 from sqlalchemy_serializer import SerializerMixin
+from app.db import db
+
 
 class Song(db.Model,SerializerMixin):
+    """ Song database """
     __tablename__ = 'songs'
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(300), nullable=True, unique=False)
     artist = db.Column(db.String(300), nullable=True, unique=False)
+    year = db.Column(db.Integer, nullable=True, unique=False)
+    genre = db.Column(db.String(300), nullable=True, unique=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     user = relationship("User", back_populates="songs", uselist=False)
 
-    def __init__(self, title, artist):
+    def __init__(self, title, artist, year, genre):
         self.title = title
         self.artist = artist
+        self.year = year
+        self.genre = genre
+
+    @staticmethod
+    def csv_headers():
+        """ returns tuple of CSV header """
+        csv_header = ( 'Title', 'Artist', 'Year', 'Genre')
+        return csv_header
 
 class Location(db.Model, SerializerMixin):
+    """ Location database """
     __tablename__ = 'locations'
     serialize_only = ('title', 'longitude', 'latitude')
 
@@ -48,6 +64,7 @@ class Location(db.Model, SerializerMixin):
 
 
 class User(UserMixin, db.Model):
+    """ User Database """
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -88,5 +105,3 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return '<User %r>' % self.email
-
-
