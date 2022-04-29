@@ -4,7 +4,6 @@ from logging.config import dictConfig
 import os
 import json
 import flask
-import flask
 import app
 from app import config
 
