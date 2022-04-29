@@ -1,17 +1,20 @@
-from flask import Blueprint, render_template, redirect, url_for, flash,current_app
+""" implement user authorization/login routes """
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app, abort
 from flask_login import login_user, login_required, logout_user, current_user
+from jinja2 import TemplateNotFound
 from werkzeug.security import generate_password_hash
 
 from app.auth.decorators import admin_required
 from app.auth.forms import login_form, register_form, profile_form, security_form, user_edit_form
 from app.db import db
-from app.db.models import User
+from app.db.models import User, Song
 
 auth = Blueprint('auth', __name__, template_folder='templates')
 
 
 @auth.route('/register', methods=['POST', 'GET'])
 def register():
+    """ register route """
     if current_user.is_authenticated:
         return redirect(url_for('auth.dashboard'))
     form = register_form()
@@ -34,6 +37,7 @@ def register():
 
 @auth.route('/login', methods=['POST', 'GET'])
 def login():
+    """ login a user (start session) """
     form = login_form()
     if current_user.is_authenticated:
         return redirect(url_for('auth.dashboard'))
@@ -51,10 +55,11 @@ def login():
             return redirect(url_for('auth.dashboard'))
     return render_template('login.html', form=form)
 
+
 @auth.route("/logout")
 @login_required
 def logout():
-    """Logout the current user."""
+    """ Logout the current user """
     user = current_user
     user.authenticated = False
     db.session.add(user)
@@ -63,15 +68,21 @@ def logout():
     return redirect(url_for('auth.login'))
 
 
-
 @auth.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    """ render dashboard page """
+    userid = current_user.get_id()
+    data = Song.query.filter_by(user_id=userid).all()
+    try:
+        return render_template('dashboard.html', data=data)
+    except TemplateNotFound:
+        abort(404)
 
 
 @auth.route('/profile', methods=['POST', 'GET'])
 def edit_profile():
+    """ allow user to view/update profile """
     user = User.query.get(current_user.get_id())
     form = profile_form(obj=user)
     if form.validate_on_submit():
@@ -85,6 +96,7 @@ def edit_profile():
 
 @auth.route('/account', methods=['POST', 'GET'])
 def edit_account():
+    """ user manages account (password, e-mail) """
     user = User.query.get(current_user.get_id())
     form = security_form(obj=user)
     if form.validate_on_submit():
@@ -104,6 +116,7 @@ def edit_account():
 @login_required
 @admin_required
 def browse_users():
+    """ Browse users route """
     data = User.query.all()
     titles = [('email', 'Email'), ('registered_on', 'Registered On')]
     retrieve_url = ('auth.retrieve_user', [('user_id', ':id')])
@@ -120,6 +133,7 @@ def browse_users():
 @auth.route('/users/<int:user_id>')
 @login_required
 def retrieve_user(user_id):
+    """ Retreive user route """
     user = User.query.get(user_id)
     return render_template('profile_view.html', user=user)
 
@@ -127,6 +141,7 @@ def retrieve_user(user_id):
 @auth.route('/users/<int:user_id>/edit', methods=['POST', 'GET'])
 @login_required
 def edit_user(user_id):
+    """ Edit user route """
     user = User.query.get(user_id)
     form = user_edit_form(obj=user)
     if form.validate_on_submit():
@@ -143,6 +158,7 @@ def edit_user(user_id):
 @auth.route('/users/new', methods=['POST', 'GET'])
 @login_required
 def add_user():
+    """ Add user route """
     form = register_form()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
@@ -161,6 +177,7 @@ def add_user():
 @auth.route('/users/<int:user_id>/delete', methods=['POST'])
 @login_required
 def delete_user(user_id):
+    """ Delete user route """
     user = User.query.get(user_id)
     if user.id == current_user.id:
         flash("You can't delete yourself!")
@@ -169,8 +186,3 @@ def delete_user(user_id):
     db.session.commit()
     flash('User Deleted', 'success')
     return redirect(url_for('auth.browse_users'), 302)
-
-
-
-
-
